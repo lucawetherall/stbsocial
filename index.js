@@ -22,10 +22,9 @@ function die(msg) {
   console.error("\n✖ " + msg + "\n");
   process.exit(1);
 }
-/** ISO date (yyyy-mm-dd) → UK filename date (dd-mm-yyyy). */
+/** ISO date (yyyy-mm-dd) kept as-is so filenames sort chronologically. */
 function ukDate(iso) {
-  const [y, m, d] = iso.split("-");
-  return `${d}-${m}-${y}`;
+  return iso;
 }
 function requireInput(file, what) {
   if (!fs.existsSync(file)) die(`Missing ${what}: ${path.relative(ROOT, file)} — place it and re-run (no guessing).`);
