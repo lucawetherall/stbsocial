@@ -182,6 +182,7 @@ async function cmdBuild(servicesFile) {
 
   fs.mkdirSync(OUT, { recursive: true });
   const built = [], skipped = [], noAlt = [], failed = [];
+  const report = [];
   const usedGlobal = new Set();
   const LABELS = ["a", "b"];
   try {
@@ -205,6 +206,15 @@ async function cmdBuild(servicesFile) {
           fs.writeFileSync(path.join(OUT, `${outKey}.caption.txt`), buildCaption(t, picks[i].attribution));
           console.log(`  ✓ ${outKey}.png  ${r.width}×${r.height}${light ? "  (light bg)" : ""}  — ${picks[i].title || picks[i].occasion || ""}`);
           built.push(outKey);
+          report.push({
+            outKey,
+            date: t.date,
+            occasion: t.occasion,
+            variant: t.variant,
+            source: picks[i].source,
+            title: picks[i].title || picks[i].occasion || "",
+            attribution: picks[i].attribution || "",
+          });
         } catch (e) {
           // One bad image must not abort the whole run.
           console.log(`  ✖ ${outKey} failed: ${e.message}`);
@@ -219,10 +229,18 @@ async function cmdBuild(servicesFile) {
   if (noAlt.length) console.log(`Only one image available (no alternate): ${noAlt.join(", ")}`);
   if (skipped.length) console.log(`Skipped (need art): ${skipped.join(", ")}`);
   if (failed.length) console.log(`Failed to render (kept going): ${failed.join(", ")}`);
+  fs.writeFileSync(path.join(OUT, "build-report.json"), JSON.stringify({ posters: report, skipped, failed, noAlt }, null, 2));
+}
+
+// ── auto (unattended: parse → images → build, no review) ────────
+async function runAuto({ parse, images, build, servicesFile }) {
+  await parse(servicesFile);
+  await images(servicesFile);
+  await build(servicesFile);
 }
 
 // ── dispatch ────────────────────────────────────────────────────
-(async () => {
+async function main() {
   const [cmd, arg] = process.argv.slice(2);
   const servicesDefault = path.join(OUT, "services.json");
   try {
@@ -231,11 +249,20 @@ async function cmdBuild(servicesFile) {
       case "images": return await cmdImages(arg ? path.resolve(arg) : servicesDefault);
       case "review": return await cmdReview();
       case "build": return await cmdBuild(arg ? path.resolve(arg) : servicesDefault);
+      case "auto":
+        return await runAuto({ parse: cmdParse, images: cmdImages, build: cmdBuild, servicesFile: servicesDefault });
       default:
-        console.log("Usage: node index.js <parse|images|review|build> [out/services.json]");
+        console.log("Usage: node index.js <parse|images|review|build|auto> [out/services.json]");
         process.exit(cmd ? 1 : 0);
     }
   } catch (e) {
     die(e.message);
   }
-})();
+}
+
+// Only run the CLI when invoked directly (so tests can require this file safely).
+if (require.main === module) {
+  main();
+}
+
+module.exports = { runAuto };

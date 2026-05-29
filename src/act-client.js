@@ -298,6 +298,51 @@ function manifestCandidate(feastTags) {
   return null;
 }
 
+// ─── Tier 5: generic sacred-art backstop (never blank) ──────────
+// Used ONLY when every upstream tier returned nothing, so a poster is ALWAYS produced.
+// Reuses commonsSearch over a curated pool of generic sacred subjects (already art-only,
+// size-gated, and attributed). The pool is rotated by a deterministic hash of the target so
+// different dates tend to draw different fallbacks; build's usedGlobal de-dup then ensures
+// no two posters in one run share the same artwork.
+const GENERIC_QUERIES = require("./data/generic-sacred-art.json").queries;
+
+function rotate(arr, offset) {
+  if (!arr.length) return arr.slice();
+  const n = ((offset % arr.length) + arr.length) % arr.length;
+  return arr.slice(n).concat(arr.slice(0, n));
+}
+
+// FNV-1a — a tiny deterministic string hash (no Math.random; stable across runs).
+function strHash(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < String(s).length; i++) {
+    h ^= String(s).charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+async function genericSacredArt(target, { search = commonsSearch } = {}) {
+  // XOR-fold the hash to spread bits before reducing to avoid collisions on small arrays.
+  const raw = strHash(target.serviceKey || target.occasion || "");
+  const folded = (raw ^ (raw >>> 13) ^ (raw >>> 7)) >>> 0;
+  const queries = rotate(GENERIC_QUERIES, folded);
+  const out = [];
+  const seen = new Set();
+  for (const q of queries) {
+    if (out.length >= 6) break;
+    const results = await search(q).catch(() => []);
+    for (const cand of results) {
+      const id = cand.artworkKey || cand.fullUrl;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ ...cand, source: "generic" });
+      if (out.length >= 6) break;
+    }
+  }
+  return out;
+}
+
 /**
  * Source 2–3 candidates for a poster target. `target` carries:
  *   { occasion, isFeast, scriptureRefs, gospelRef, imageKeywords, feastTags }
@@ -345,6 +390,14 @@ async function sourceCandidates(target) {
     c.forEach(push);
   }
 
+  // Tier 5 — generic sacred-art backstop: only if nothing else was found, so a poster is
+  // never skipped for lack of art (the automated pipeline has no human to resolve gaps).
+  if (out.length === 0) {
+    const generic = await genericSacredArt(target).catch(() => []);
+    generic.forEach(push);
+    if (out.length) axisUsed = axisUsed || "generic";
+  }
+
   return { candidates: out.slice(0, 6), axisUsed, needsManual: out.length === 0 };
 }
 
@@ -363,4 +416,5 @@ module.exports = {
   readManifest,
   politeFetch,
   buildAttribution,
+  genericSacredArt,
 };

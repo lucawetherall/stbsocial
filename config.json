@@ -12,6 +12,11 @@
   "usage": "religious-noncommercial",
   "poster": { "width": 1080, "height": 1350, "scale": 2 },
   "fonts": { "display": "Cormorant Garamond", "body": "Source Serif 4" },
+  "automation": {
+    "inputDir": "/Users/<user>/Library/CloudStorage/GoogleDrive-<account>/My Drive/StBarnabas/music-lists-in",
+    "outputDir": "/Users/<user>/Library/CloudStorage/GoogleDrive-<account>/My Drive/StBarnabas/posters-out",
+    "settleSeconds": 10
+  },
   "textColour": "#FFFFFF",
   "userAgent": "stbarnabas-social/0.1 (St Barnabas Church Ealing liturgical posters; contact: lucawetherall@me.com)"
 }
