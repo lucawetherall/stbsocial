@@ -1,0 +1,13 @@
+{
+  "_comment": "Maps a Common Worship Sunday Gospel reference to the depicted subject(s) a sacred-art search should use, so ordinary Sundays get real scene/parable art rather than matching the occasion words (e.g. 'Trinity' → church buildings). Keyed by the exact gospel reference string from lectionary-coe.json. Covers the active window; unknown refs fall back to season/occasion search. Extend as new music lists are processed.",
+  "subjects": {
+    "Matthew 9.9-13,18-26": ["Calling of Saint Matthew", "Christ healing the woman with an issue of blood"],
+    "Matthew 9.35 - 10.8 [9-23]": ["Christ sending out the twelve apostles", "Mission of the Apostles"],
+    "Matthew 10.24-39": ["Christ teaching the disciples", "Christ Pantocrator"],
+    "Matthew 10.40-42": ["Christ blessing", "cup of cold water charity"],
+    "Matthew 11.16-19,25-30": ["Come unto me all ye that labour", "Christ Pantocrator"],
+    "Matthew 13.1-9,18-23": ["Parable of the Sower", "the Sower Van Gogh"],
+    "Matthew 13.24-30,36-43": ["Parable of the Wheat and the Tares", "Parable of the Tares"],
+    "Matthew 13.31-33,44-52": ["Parable of the Mustard Seed", "Parable of the Hidden Treasure"]
+  }
+}
