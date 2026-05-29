@@ -181,6 +181,7 @@ async function cmdBuild(servicesFile) {
 
   fs.mkdirSync(OUT, { recursive: true });
   const built = [], skipped = [], noAlt = [], failed = [];
+  const report = [];
   const usedGlobal = new Set();
   const LABELS = ["a", "b"];
   try {
@@ -204,6 +205,15 @@ async function cmdBuild(servicesFile) {
           fs.writeFileSync(path.join(OUT, `${outKey}.caption.txt`), buildCaption(t, picks[i].attribution));
           console.log(`  ✓ ${outKey}.png  ${r.width}×${r.height}${light ? "  (light bg)" : ""}  — ${picks[i].title || picks[i].occasion || ""}`);
           built.push(outKey);
+          report.push({
+            outKey,
+            date: t.date,
+            occasion: t.occasion,
+            variant: t.variant,
+            source: picks[i].source,
+            title: picks[i].title || picks[i].occasion || "",
+            attribution: picks[i].attribution || "",
+          });
         } catch (e) {
           // One bad image must not abort the whole run.
           console.log(`  ✖ ${outKey} failed: ${e.message}`);
@@ -218,6 +228,14 @@ async function cmdBuild(servicesFile) {
   if (noAlt.length) console.log(`Only one image available (no alternate): ${noAlt.join(", ")}`);
   if (skipped.length) console.log(`Skipped (need art): ${skipped.join(", ")}`);
   if (failed.length) console.log(`Failed to render (kept going): ${failed.join(", ")}`);
+  fs.writeFileSync(path.join(OUT, "build-report.json"), JSON.stringify({ posters: report, skipped, failed, noAlt }, null, 2));
+}
+
+// ── auto (unattended: parse → images → build, no review) ────────
+async function runAuto({ parse, images, build, servicesFile }) {
+  await parse(servicesFile);
+  await images(servicesFile);
+  await build(servicesFile);
 }
 
 // ── auto (unattended: parse → images → build, no review) ────────
