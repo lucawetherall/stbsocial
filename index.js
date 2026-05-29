@@ -22,10 +22,9 @@ function die(msg) {
   console.error("\n✖ " + msg + "\n");
   process.exit(1);
 }
-/** ISO date (yyyy-mm-dd) → UK filename date (dd-mm-yyyy). */
+/** ISO date (yyyy-mm-dd) kept as-is so filenames sort chronologically. */
 function ukDate(iso) {
-  const [y, m, d] = iso.split("-");
-  return `${d}-${m}-${y}`;
+  return iso;
 }
 function requireInput(file, what) {
   if (!fs.existsSync(file)) die(`Missing ${what}: ${path.relative(ROOT, file)} — place it and re-run (no guessing).`);
@@ -239,17 +238,40 @@ async function runAuto({ parse, images, build, servicesFile }) {
   await build(servicesFile);
 }
 
+// ── auto (unattended: parse → images → build, no review) ────────
+function validateMusicList() {
+  const listFile = path.join(ROOT, "samples", "music-list.html");
+  if (!fs.existsSync(listFile)) {
+    die(`No music list found at samples/music-list.html.\nPlace the St Barnabas music list HTML there before running auto.`);
+  }
+  const html = fs.readFileSync(listFile, "utf8");
+  if (!/<article[^>]+class="[^"]*service/i.test(html)) {
+    die(
+      `samples/music-list.html does not look like a valid St Barnabas music list.\n` +
+      `Expected <article class="service"> blocks — got ${html.length} bytes of unrecognised HTML.\n` +
+      `Check that you uploaded the correct file.`
+    );
+  }
+}
+
+async function runAuto({ parse, images, build, servicesFile }) {
+  await parse(servicesFile);
+  await images(servicesFile);
+  await build(servicesFile);
+}
+
 // ── dispatch ────────────────────────────────────────────────────
 async function main() {
   const [cmd, arg] = process.argv.slice(2);
   const servicesDefault = path.join(OUT, "services.json");
   try {
     switch (cmd) {
-      case "parse": return cmdParse(arg ? path.resolve(arg) : servicesDefault);
+      case "parse":  return cmdParse(arg ? path.resolve(arg) : servicesDefault);
       case "images": return await cmdImages(arg ? path.resolve(arg) : servicesDefault);
       case "review": return await cmdReview();
-      case "build": return await cmdBuild(arg ? path.resolve(arg) : servicesDefault);
+      case "build":  return await cmdBuild(arg ? path.resolve(arg) : servicesDefault);
       case "auto":
+        validateMusicList();
         return await runAuto({ parse: cmdParse, images: cmdImages, build: cmdBuild, servicesFile: servicesDefault });
       default:
         console.log("Usage: node index.js <parse|images|review|build|auto> [out/services.json]");
@@ -265,4 +287,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { runAuto };
+module.exports = { runAuto, validateMusicList };
