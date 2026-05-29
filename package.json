@@ -12,7 +12,10 @@
     "parse": "node index.js parse",
     "images": "node index.js images",
     "review": "node index.js review",
-    "build": "node index.js build"
+    "build": "node index.js build",
+    "auto": "node index.js auto",
+    "watch": "node scripts/watch.js",
+    "test": "node --test"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
