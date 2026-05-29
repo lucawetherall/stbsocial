@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<!--
+  St Barnabas social poster template — 1080×1350, rendered at deviceScaleFactor 2 (→2160×2700).
+  Music-forward design: full-bleed sacred art, white serif text over a dark scrim, with the
+  COMPLETE music list for the day shown prominently. Tokens ({{LIKE_THIS}}) are filled by
+  src/compose.js. window.__fit() (called by render.js after fonts load) scales the occasion
+  to the width and the lower content block to the available height so nothing overflows.
+-->
+<style>
+{{FONT_FACES}}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { width: 1080px; height: 1350px; }
+
+.canvas {
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  overflow: hidden;
+  background: #1a1a1a;
+  font-family: 'Source Serif 4', Georgia, serif;
+  color: {{TEXT_COLOUR}};
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "liga", "kern";
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background-image: {{IMAGE_CSS}};
+  background-size: cover;
+  background-position: {{FOCAL}};
+  background-repeat: no-repeat;
+}
+
+/* Legibility scrims: a soft darkening at the very top (for the logo) and a strong
+   gradient rising from the foot to carry the music block. */
+.scrim-top {
+  position: absolute; inset: 0 0 auto 0; height: 320px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0));
+}
+.scrim-bottom {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(0,0,0,0) 0%,
+    rgba(0,0,0,0) 30%,
+    rgba(0,0,0,0.45) 52%,
+    rgba(0,0,0,0.72) 72%,
+    rgba(0,0,0,0.88) 100%);
+}
+
+/* Light-background fallback: dark text on a soft light panel instead of white-on-scrim. */
+.canvas.light .scrim-top { background: linear-gradient(to bottom, rgba(255,255,255,0.55), rgba(255,255,255,0)); }
+.canvas.light .scrim-bottom {
+  background: linear-gradient(to bottom,
+    rgba(247,244,237,0) 0%,
+    rgba(247,244,237,0) 28%,
+    rgba(247,244,237,0.55) 50%,
+    rgba(247,244,237,0.82) 70%,
+    rgba(247,244,237,0.94) 100%);
+}
+
+/* ── Header: logo mark + church name + strap, top-left ── */
+.header {
+  position: absolute; top: 54px; left: 60px; right: 60px;
+  display: flex; align-items: center; gap: 22px; z-index: 3;
+}
+.header .mark { height: 104px; width: auto; flex-shrink: 0; }
+.header .names { line-height: 1.04; display: flex; flex-direction: column; justify-content: center; }
+.header .church {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 600; font-size: 50px; letter-spacing: 0.5px;
+}
+.header .strap {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 400; font-style: italic; font-size: 28px; opacity: 0.92; margin-top: 4px;
+}
+
+/* ── Lower content block: occasion, services, music ── */
+.lower {
+  position: absolute; left: 60px; right: 60px; bottom: 78px; z-index: 3;
+  transform-origin: bottom left;
+}
+
+/* Tiny one-line footer (staff credits) at the very foot. */
+.footer {
+  position: absolute; left: 60px; right: 60px; bottom: 34px; z-index: 3;
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-size: 18px; letter-spacing: 0.3px; opacity: 0.9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: center;
+}
+.footer .fcredit + .fcredit { margin-left: 26px; }
+.footer .flabel {
+  font-weight: 600; text-transform: uppercase; letter-spacing: 1.6px;
+  font-size: 14px; opacity: 0.78; margin-right: 8px;
+}
+
+.occasion {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 600;
+  font-size: 92px;      /* auto-fit shrinks this to fit the width */
+  line-height: 1.0;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.45);
+}
+.canvas.light .occasion { text-shadow: none; }
+.occasion.caps { text-transform: uppercase; letter-spacing: 2px; }
+
+.dateline {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 500; font-size: 33px; letter-spacing: 0.4px;
+  margin-bottom: 22px; opacity: 0.96;
+}
+
+/* Music — the prominent element */
+.music { display: flex; flex-direction: column; gap: 16px; }
+.svc { }
+.svc-head {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 600; font-size: 23px;
+  text-transform: uppercase; letter-spacing: 2.6px;
+  padding-bottom: 6px; margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.32);
+}
+.canvas.light .svc-head { border-bottom-color: rgba(42,23,8,0.3); }
+
+.row {
+  display: grid; grid-template-columns: 200px 1fr; gap: 6px 24px;
+  align-items: baseline; margin: 5px 0;
+}
+.row .label {
+  font-family: 'Cormorant Garamond', Garamond, serif;
+  font-weight: 600; font-size: 25px;
+  text-transform: uppercase; letter-spacing: 2px;
+  opacity: 0.86;
+}
+.row .value {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 400; font-size: 24px; line-height: 1.3;
+}
+.row .value .line { display: block; }
+.row .value .line + .line { margin-top: 3px; }
+.row .value em { font-style: italic; }
+
+.scale-wrap { transform-origin: bottom left; }
+</style>
+</head>
+<body>
+<div class="canvas {{LIGHT_CLASS}}" id="canvas">
+  <div class="bg"></div>
+  <div class="scrim-top"></div>
+  <div class="scrim-bottom"></div>
+
+  <div class="header">
+    {{LOGO_HTML}}
+    <div class="names">
+      <div class="church">{{CHURCH}}</div>
+      <div class="strap">{{STRAP}}</div>
+    </div>
+  </div>
+
+  <div class="lower" id="lower">
+    <div class="scale-wrap" id="scaleWrap">
+      <div class="occasion {{OCCASION_CLASS}}" id="occasion">{{OCCASION}}</div>
+      <div class="dateline">{{DATELINE}}</div>
+      <div class="music">
+        {{MUSIC_HTML}}
+      </div>
+    </div>
+  </div>
+
+  {{FOOTER_HTML}}
+</div>
+
+<script>
+// Auto-fit: shrink the occasion to the available width, then scale the whole lower block
+// down (never up) so it never overflows the canvas vertically. Called by render.js after
+// document.fonts.ready so measurements use the real serif faces, not a fallback.
+window.__fit = function () {
+  var canvas = document.getElementById('canvas');
+  var lower = document.getElementById('lower');
+  var wrap = document.getElementById('scaleWrap');
+  var occ = document.getElementById('occasion');
+
+  // 1) Fit the occasion to the lower block's width (min 44px).
+  var maxW = lower.clientWidth;
+  var size = parseFloat(getComputedStyle(occ).fontSize);
+  var guard = 0;
+  while (occ.scrollWidth > maxW && size > 44 && guard++ < 120) {
+    size -= 2; occ.style.fontSize = size + 'px';
+  }
+
+  // 2) Fit the block vertically. If it overflows, FIRST drop the Psalm rows (the user
+  //    permits this to make room), then only scale if it still doesn't fit.
+  var topLimit = 360;                       // keep clear of the header/top scrim
+  var available = lower.getBoundingClientRect().bottom - topLimit;
+  var droppedPsalm = false;
+  if (wrap.getBoundingClientRect().height > available) {
+    var psalms = wrap.querySelectorAll('.row.psalm');
+    if (psalms.length) {
+      psalms.forEach(function (p) { p.style.display = 'none'; });
+      droppedPsalm = true;
+    }
+  }
+  var needed = wrap.getBoundingClientRect().height;
+  var scale = 1;
+  if (needed > available) {
+    scale = Math.max(0.5, available / needed);
+    wrap.style.transform = 'scale(' + scale + ')';
+  }
+  return { occasionSize: size, droppedPsalm: droppedPsalm, scale: scale };
+};
+</script>
+</body>
+</html>

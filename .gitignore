@@ -1,0 +1,10 @@
+node_modules/
+cache/images/
+cache/queries/
+cache/contact-sheets/
+cache/manual/
+out/
+
+# OS / editor cruft
+.DS_Store
+*.log

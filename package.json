@@ -1,0 +1,27 @@
+{
+  "name": "stbarnabas-social",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Automated liturgical social-media poster generator for St Barnabas Church, Ealing.",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bin": {
+    "stbarnabas-social": "index.js"
+  },
+  "scripts": {
+    "parse": "node index.js parse",
+    "images": "node index.js images",
+    "review": "node index.js review",
+    "build": "node index.js build"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "date-fns": "^4.3.0",
+    "prompts": "^2.4.2",
+    "puppeteer": "^24.43.1",
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
