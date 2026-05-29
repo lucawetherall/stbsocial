@@ -122,3 +122,47 @@ config.json · index.js
 
 `node_modules/`, `cache/images/`, and `out/` are git-ignored; `cache/manifest.json` is tracked
 (it is the useful long-term record of vetted, attributed art).
+
+## Automated mode (always-on Mac mini)
+
+The pipeline can run unattended: drop the music-list HTML into a Google Drive folder and the
+finished posters appear in another. No review step runs; art is auto-selected and a generic
+sacred artwork is used as a last resort, so every service always gets a poster.
+
+### How it works
+
+`scripts/watch.js` (run under `launchd`) watches a **Google Drive for Desktop**-mirrored
+*input* folder. When a music-list `.html` settles there, it runs `node index.js auto`
+(`parse → images → build`, no `review`) and copies the produced `*.png`, `*.caption.txt`, and
+a `_run-summary.txt` into a per-list subfolder of the mirrored *output* folder. Drive for
+Desktop syncs both folders — the app only ever reads and writes local files.
+
+### One-time setup on the mini
+
+1. Install **Google Drive for Desktop**, sign in, and set both folders to **mirror** locally.
+2. `npm install` in this repo (Node ≥ 18).
+3. Edit `config.json` → `automation.inputDir` / `automation.outputDir` to the two mirrored
+   folder paths (under `~/Library/CloudStorage/GoogleDrive-…`). `settleSeconds` (default 10)
+   is how long a file's size must hold steady before processing, so half-synced downloads are
+   never parsed.
+4. Edit `deploy/com.stbarnabas.social.watch.plist`, replacing every `/REPLACE/WITH/…` path
+   (find your Node with `which node`), then install it:
+   ```bash
+   cp deploy/com.stbarnabas.social.watch.plist ~/Library/LaunchAgents/
+   launchctl load ~/Library/LaunchAgents/com.stbarnabas.social.watch.plist
+   ```
+   To stop it: `launchctl unload ~/Library/LaunchAgents/com.stbarnabas.social.watch.plist`.
+
+### Operating notes
+
+- **Each upload = one run.** Re-uploading the *same* file does nothing (content-hash dedup);
+  upload a changed list to regenerate.
+- **Output is grouped per list** under a folder named for the list's period, e.g.
+  `2026-05_May-June/`.
+- **`_run-summary.txt`** in each output subfolder is the "did it work?" record: posters made,
+  the art used per poster, any generic-art fallbacks, and any render failures.
+- **Failures** (e.g. an unparseable list) write a FAILED `_run-summary.txt` and are *not*
+  marked processed, so a corrected re-upload retries automatically.
+- **Logs** live in `cache/watch.log` (and `cache/launchd.{out,err}.log`) on the mini.
+- The interactive `node index.js review` workflow is unchanged and still available when you
+  want to hand-pick art.
