@@ -81,7 +81,7 @@ async function process_(filePath) {
       fs.writeFileSync(path.join(destDir, "_run-summary.txt"),
         auto.formatRunSummary(report, { sourceFile: name, period, ranAt, ok: true }));
       auto.markProcessed(PROCESSED, hash, ranAt);
-      log(`OK — ${report.posters.length} poster(s), ${copied.length} file(s) → ${destDir}`);
+      log(`OK — ${(report.posters || []).length} poster(s), ${copied.length} file(s) → ${destDir}`);
     } else {
       fs.mkdirSync(destDir, { recursive: true });
       fs.writeFileSync(path.join(destDir, "_run-summary.txt"),
