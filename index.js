@@ -148,16 +148,20 @@ async function ensureLocalImage(pick, key) {
 function resolvePicks(target, candidateEntry, manifestEntry, usedGlobal) {
   const picks = [];
   const seen = new Set();
+  // A pick is identified by BOTH its file (imageFile/fullUrl) AND its artwork identity
+  // (artist+title). It's a duplicate if EITHER has already been used — this catches both
+  // different scans of one painting and the same file attributed to two artists.
+  const idsOf = (p) => [p.imageFile, p.fullUrl, p.artworkKey].filter(Boolean);
+  const isDup = (p) => idsOf(p).some((id) => seen.has(id) || (usedGlobal && usedGlobal.has(id)));
   const add = (p) => {
-    const id = p.imageFile || p.fullUrl;
-    if (!id || seen.has(id) || picks.length >= 2) return;
-    if (usedGlobal && usedGlobal.has(id)) return; // never reuse art across posters
-    seen.add(id); picks.push(p);
+    if (picks.length >= 2 || isDup(p)) return;
+    idsOf(p).forEach((id) => seen.add(id));
+    picks.push(p);
   };
   if (manifestEntry && manifestEntry.imageFile) add(manifestEntry);
   for (const c of (candidateEntry && candidateEntry.candidates) || []) add(c);
-  // mark chosen images as used so other posters can't repeat them
-  if (usedGlobal) picks.forEach((p) => usedGlobal.add(p.imageFile || p.fullUrl));
+  // mark chosen files+artworks as used so other posters can't repeat them
+  if (usedGlobal) picks.forEach((p) => idsOf(p).forEach((id) => usedGlobal.add(id)));
   return picks;
 }
 

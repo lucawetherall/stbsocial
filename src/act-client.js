@@ -111,6 +111,22 @@ function writeQCache(key, data) {
 
 const stripHtml = (s) => String(s || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 
+/**
+ * Identity of the underlying ARTWORK (not the file), so two scans of the same painting
+ * (e.g. "… - Walters 372505" vs "… - Google Art Project") collapse to one. Built from the
+ * artist + a normalised core title with source/museum/ID suffixes stripped.
+ */
+function artworkKey({ artist, title }) {
+  let t = String(title || "").toLowerCase();
+  t = t.replace(
+    /\b(google art project|walters|wga|the yorck project|yorck project|hermitage|national trust|metropolitan|met museum|louvre|rijksmuseum|wikimedia commons|wikidata|web gallery of art|national gallery|google cultural institute|art project|museum)\b/gi,
+    "",
+  );
+  t = t.replace(/\d+/g, "").replace(/[^a-z ]/gi, " ").replace(/\s+/g, " ").trim();
+  const a = String(artist || "").toLowerCase().replace(/[^a-z]/g, "");
+  return (a ? a + "|" : "") + t;
+}
+
 // ─── Tier 4: Wikimedia Commons keyword search ───────────────────
 async function commonsSearch(query, { cache = true } = {}) {
   const key = "commons-" + cacheKey(query);
@@ -152,6 +168,7 @@ async function commonsSearch(query, { cache = true } = {}) {
       licence,
       attribution: buildAttribution({ artist, title: displayTitle, licence, credit, source: "Wikimedia Commons" }),
       sourceUrl: info.descriptionurl,
+      artworkKey: artworkKey({ artist, title: displayTitle }),
     });
   }
   if (cache) writeQCache(key, candidates);
@@ -208,6 +225,7 @@ async function wikidataActSearch(subjectLabel, { cache = true } = {}) {
         licence: meta.licence, source: "Art in the Christian Tradition / Wikimedia Commons",
       }),
       sourceUrl: meta.sourceUrl,
+      artworkKey: artworkKey({ artist, title: stripHtml(r.itemLabel?.value) || meta.title }),
     });
   }
   if (cache) writeQCache(key, candidates);
@@ -293,7 +311,16 @@ async function sourceCandidates(target) {
   const cached = manifestCandidate(feastTags);
   if (cached) out.push(cached);
 
-  const push = (f) => { if (out.length < 3 && !out.some((o) => o.fullUrl === f.fullUrl)) out.push(f); };
+  const seen = new Set();
+  const idsOf = (f) => [f.fullUrl, f.artworkKey].filter(Boolean);
+  const push = (f) => {
+    if (out.length >= 6) return;
+    const ids = idsOf(f);
+    // Duplicate if the same FILE (url) OR the same ARTWORK (artist+title) was already taken.
+    if (!ids.length || ids.some((id) => seen.has(id))) return;
+    ids.forEach((id) => seen.add(id));
+    out.push(f);
+  };
   let axisUsed = null;
   const subjectKeywords = (target.imageKeywords || []).filter(Boolean);
 

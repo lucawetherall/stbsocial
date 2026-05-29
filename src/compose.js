@@ -115,7 +115,10 @@ function compose(target) {
     imageCss = `url('${dataUri(target.imagePath, imageMime)}')`;
   }
 
-  const logoFile = path.join(ROOT, "assets", "logo-white.png");
+  // Light background → black mark (white would vanish); otherwise the white knockout.
+  const logoName = target.light ? "logo-black.png" : "logo-white.png";
+  let logoFile = path.join(ROOT, "assets", logoName);
+  if (!fs.existsSync(logoFile)) logoFile = path.join(ROOT, "assets", "logo-white.png");
   const logoHtml = fs.existsSync(logoFile)
     ? `<img class="mark" src="${dataUri(logoFile, "image/png")}" alt="">`
     : "";
