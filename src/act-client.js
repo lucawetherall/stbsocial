@@ -390,6 +390,14 @@ async function sourceCandidates(target) {
     c.forEach(push);
   }
 
+  // Tier 5 — generic sacred-art backstop: only if nothing else was found, so a poster is
+  // never skipped for lack of art (the automated pipeline has no human to resolve gaps).
+  if (out.length === 0) {
+    const generic = await genericSacredArt(target).catch(() => []);
+    generic.forEach(push);
+    if (out.length) axisUsed = axisUsed || "generic";
+  }
+
   return { candidates: out.slice(0, 6), axisUsed, needsManual: out.length === 0 };
 }
 
