@@ -22,10 +22,6 @@ function die(msg) {
   console.error("\n✖ " + msg + "\n");
   process.exit(1);
 }
-/** ISO date (yyyy-mm-dd) kept as-is so filenames sort chronologically. */
-function ukDate(iso) {
-  return iso;
-}
 function requireInput(file, what) {
   if (!fs.existsSync(file)) die(`Missing ${what}: ${path.relative(ROOT, file)} — place it and re-run (no guessing).`);
 }
@@ -64,11 +60,10 @@ async function cmdImages(servicesFile) {
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
-  const entries = results;
-  const needManual = entries.filter((e) => !e.candidates.length).map((e) => e.serviceKey);
+  const needManual = results.filter((e) => !e.candidates.length).map((e) => e.serviceKey);
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, "candidates.json"), JSON.stringify(entries, null, 2));
-  console.log(`\nWrote ${entries.length} targets → out/candidates.json`);
+  fs.writeFileSync(path.join(OUT, "candidates.json"), JSON.stringify(results, null, 2));
+  console.log(`\nWrote ${results.length} targets → out/candidates.json`);
   if (needManual.length) console.log(`Awaiting manual art: ${needManual.join(", ")}`);
 }
 
@@ -191,8 +186,8 @@ async function cmdBuild(servicesFile) {
       if (picks.length < 2) noAlt.push(t.serviceKey);
       const variantTag = t.variant && t.variant !== "single" ? `-${t.variant}` : "";
       for (let i = 0; i < picks.length; i++) {
-        // Output filename uses the UK date (dd-mm-yyyy); serviceKey stays ISO internally.
-        const outKey = `${ukDate(t.date)}${variantTag}-${LABELS[i]}`;
+        // Output filename uses the ISO date (yyyy-mm-dd) so files sort chronologically.
+        const outKey = `${t.date}${variantTag}-${LABELS[i]}`;
         try {
           const imagePath = await ensureLocalImage(picks[i], `${t.serviceKey}-${LABELS[i]}`);
           const imageDataUri = await embedImage(imagePath);
@@ -229,13 +224,6 @@ async function cmdBuild(servicesFile) {
   if (skipped.length) console.log(`Skipped (need art): ${skipped.join(", ")}`);
   if (failed.length) console.log(`Failed to render (kept going): ${failed.join(", ")}`);
   fs.writeFileSync(path.join(OUT, "build-report.json"), JSON.stringify({ posters: report, skipped, failed, noAlt }, null, 2));
-}
-
-// ── auto (unattended: parse → images → build, no review) ────────
-async function runAuto({ parse, images, build, servicesFile }) {
-  await parse(servicesFile);
-  await images(servicesFile);
-  await build(servicesFile);
 }
 
 // ── auto (unattended: parse → images → build, no review) ────────

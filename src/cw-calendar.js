@@ -22,7 +22,7 @@ const {
   computeLiturgicalCalendar,
   getReadings,
 } = require("./lib/lectionary/calendar.js");
-const { addDays, isSunday, getDay } = require("date-fns");
+const { addDays, isSunday } = require("date-fns");
 
 const feastsData = require("./data/feasts-cw.json");
 let config = {};
@@ -47,11 +47,12 @@ function toDate(isoStr) {
 
 /**
  * "The Nth Sunday after Trinity" for a date in the after-Trinity Ordinary Time window.
- * Returns null if the date is outside that window (e.g. before Trinity or in the
- * pre-Advent "Sundays before Advent" run).
+ * Returns null if the date is not a Sunday, or is outside that window (e.g. before Trinity
+ * or in the pre-Advent "Sundays before Advent" run).
  */
 function nthSundayAfterTrinity(isoStr) {
   const date = toDate(isoStr);
+  if (!isSunday(date)) return null; // a weekday is never a "Sunday after Trinity"
   const cy = getChurchYear(date);
   const easter = computeEasterDate(cy.endYear);
   const trinitySunday = addDays(easter, 56);
