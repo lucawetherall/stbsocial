@@ -60,7 +60,14 @@ function buildTargets(dateObj) {
     season: li.season,
   };
 
-  if (feastName) {
+  // Only offer the second "ordinary day" variant when there genuinely is one that differs
+  // from the feast — i.e. the feast coincides with a real ordinary Sunday/season. A weekday
+  // feast (e.g. St Barnabas on a Thursday) has no competing Sunday, so it would otherwise
+  // yield a bogus "Nth Sunday after Trinity" or a duplicate of the feast poster.
+  const hasDistinctOrdinary =
+    feastName && ordinaryName && isOrdinaryName(ordinaryName) && slug(ordinaryName) !== slug(feastName);
+
+  if (feastName && hasDistinctOrdinary) {
     return [
       {
         ...base,
@@ -79,6 +86,21 @@ function buildTargets(dateObj) {
         isFeast: false,
         imageKeywords: keywordsFor({ occasion: ordinaryName, isFeast: false, gospelRef: li.gospelRef }),
         feastTags: [slug(ordinaryName)],
+      },
+    ];
+  }
+
+  // A feast with no distinct ordinary alternative → a single feast poster.
+  if (feastName) {
+    return [
+      {
+        ...base,
+        serviceKey: dateObj.serviceKey,
+        variant: "single",
+        occasion: feastName,
+        isFeast: true,
+        imageKeywords: keywordsFor({ occasion: feastName, isFeast: true }),
+        feastTags: [slug(feastName)],
       },
     ];
   }
