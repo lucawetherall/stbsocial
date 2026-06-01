@@ -43,12 +43,13 @@ function cmdParse(outFile) {
 }
 
 // ── images ──────────────────────────────────────────────────────
-async function cmdImages(servicesFile) {
+async function cmdImages(servicesFile, onlyDates) {
   requireInput(servicesFile, "services.json (run `parse` first)");
   const { buildAllTargets } = require("./src/targets.js");
   const { sourceCandidates } = require("./src/act-client.js");
   const dates = JSON.parse(fs.readFileSync(servicesFile, "utf8"));
-  const targets = buildAllTargets(dates);
+  let targets = buildAllTargets(dates);
+  if (onlyDates && onlyDates.length) targets = targets.filter((t) => onlyDates.includes(t.date));
 
   // Process a few targets concurrently — the per-host throttle in act-client keeps each
   // service polite, while pipelining lets Commons work proceed during Wikidata waits.
@@ -65,11 +66,19 @@ async function cmdImages(servicesFile) {
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
-  const entries = results;
+  let entries = results;
   const needManual = entries.filter((e) => !e.candidates.length).map((e) => e.serviceKey);
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, "candidates.json"), JSON.stringify(entries, null, 2));
-  console.log(`\nWrote ${entries.length} targets → out/candidates.json`);
+  const candPath = path.join(OUT, "candidates.json");
+  // When filtering to specific dates, merge into the existing candidates rather than
+  // clobbering the others (replace same serviceKeys, keep the rest).
+  if (onlyDates && onlyDates.length && fs.existsSync(candPath)) {
+    const prev = JSON.parse(fs.readFileSync(candPath, "utf8"));
+    const updatedKeys = new Set(entries.map((e) => e.serviceKey));
+    entries = prev.filter((e) => !updatedKeys.has(e.serviceKey)).concat(entries);
+  }
+  fs.writeFileSync(candPath, JSON.stringify(entries, null, 2));
+  console.log(`\nWrote ${results.length} target(s) → out/candidates.json`);
   if (needManual.length) console.log(`Awaiting manual art: ${needManual.join(", ")}`);
 }
 
@@ -165,7 +174,7 @@ function resolvePicks(target, candidateEntry, manifestEntry, usedGlobal) {
   return picks;
 }
 
-async function cmdBuild(servicesFile) {
+async function cmdBuild(servicesFile, onlyDates) {
   requireInput(servicesFile, "services.json (run `parse` first)");
   const candPath = path.join(OUT, "candidates.json");
   requireInput(candPath, "candidates.json (run `images` first)");
@@ -178,7 +187,8 @@ async function cmdBuild(servicesFile) {
   const candById = {};
   for (const e of JSON.parse(fs.readFileSync(candPath, "utf8"))) candById[e.serviceKey] = e;
   const dates = JSON.parse(fs.readFileSync(servicesFile, "utf8"));
-  const targets = buildAllTargets(dates);
+  let targets = buildAllTargets(dates);
+  if (onlyDates && onlyDates.length) targets = targets.filter((t) => onlyDates.includes(t.date));
 
   fs.mkdirSync(OUT, { recursive: true });
   const built = [], skipped = [], noAlt = [], failed = [];
@@ -223,16 +233,19 @@ async function cmdBuild(servicesFile) {
 
 // ── dispatch ────────────────────────────────────────────────────
 (async () => {
-  const [cmd, arg] = process.argv.slice(2);
+  const [cmd, arg, datesArg] = process.argv.slice(2);
   const servicesDefault = path.join(OUT, "services.json");
+  // Optional date filter (ISO yyyy-mm-dd, comma-separated) for images/build, e.g.
+  //   node index.js build out/services.json 2026-06-07,2026-07-19
+  const onlyDates = (datesArg || "").split(",").map((s) => s.trim()).filter(Boolean);
   try {
     switch (cmd) {
       case "parse": return cmdParse(arg ? path.resolve(arg) : servicesDefault);
-      case "images": return await cmdImages(arg ? path.resolve(arg) : servicesDefault);
+      case "images": return await cmdImages(arg ? path.resolve(arg) : servicesDefault, onlyDates);
       case "review": return await cmdReview();
-      case "build": return await cmdBuild(arg ? path.resolve(arg) : servicesDefault);
+      case "build": return await cmdBuild(arg ? path.resolve(arg) : servicesDefault, onlyDates);
       default:
-        console.log("Usage: node index.js <parse|images|review|build> [out/services.json]");
+        console.log("Usage: node index.js <parse|images|review|build> [out/services.json] [iso-date,iso-date]");
         process.exit(cmd ? 1 : 0);
     }
   } catch (e) {

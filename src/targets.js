@@ -10,8 +10,18 @@
  * self-describing for both image sourcing (act-client) and composition (compose).
  */
 
+const path = require("path");
 const cw = require("./cw-calendar.js");
 const gospelSubjects = require("./data/gospel-subjects.json").subjects;
+
+let _overrides = null;
+function occasionOverrides() {
+  if (_overrides === null) {
+    try { _overrides = require(path.join(process.cwd(), "config.json")).occasionOverrides || {}; }
+    catch { _overrides = {}; }
+  }
+  return _overrides;
+}
 
 const slug = (s) =>
   String(s || "").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -45,6 +55,30 @@ function keywordsFor({ occasion, isFeast, gospelRef }) {
 function buildTargets(dateObj) {
   const li = cw.liturgicalInfo(dateObj.date);
   const ordinaryName = li.liturgicalDayName || dateObj.occasion;
+
+  // Manual occasion override (config.occasionOverrides) — the parish has designated this
+  // date a particular feast (e.g. Corpus Christi, St Mary Magdalene). One feast poster,
+  // the date's music unchanged, art sourced for the override's keywords.
+  const override = occasionOverrides()[dateObj.date];
+  if (override) {
+    return [
+      {
+        ...{
+          date: dateObj.date, dateDisplay: dateObj.dateDisplay, services: dateObj.services,
+          scriptureRefs: li.scriptureRefs, gospelRef: li.gospelRef,
+          lectionaryYear: li.lectionaryYear, season: li.season,
+        },
+        serviceKey: dateObj.serviceKey,
+        variant: "single",
+        occasion: override.occasion,
+        isFeast: true,
+        imageKeywords: (override.keywords && override.keywords.length)
+          ? override.keywords
+          : keywordsFor({ occasion: override.occasion, isFeast: true }),
+        feastTags: [slug(override.occasion)],
+      },
+    ];
+  }
 
   // A distinct feast among the day's stated feasts (e.g. "St Barnabas the Apostle",
   // "The Patronal Festival") — anything that isn't an ordinary Sunday/season name.

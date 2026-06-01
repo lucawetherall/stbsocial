@@ -4,6 +4,10 @@
   "locationStrap": "Pitshanger Lane, London W5 1QG",
   "calendar": "common-worship",
   "patron": { "name": "Barnabas the Apostle", "keywords": ["Paul and Barnabas at Lystra", "Saint Barnabas Apostle"] },
+  "occasionOverrides": {
+    "2026-06-07": { "occasion": "Corpus Christi", "keywords": ["Institution of the Eucharist", "Last Supper", "Adoration of the Blessed Sacrament"] },
+    "2026-07-19": { "occasion": "The Feast of St Mary Magdalene", "keywords": ["Mary Magdalene", "Noli me tangere", "Penitent Magdalene"] }
+  },
   "staff": [
     { "role": "Vicar", "name": "The Revd Sarah Howard-Jones" },
     { "role": "Director of Music", "name": "Luca Wetherall" },
