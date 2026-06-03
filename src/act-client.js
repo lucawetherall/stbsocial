@@ -18,7 +18,10 @@
  * a descriptive User-Agent (Wikimedia enforces a UA policy).
  *
  * Licence/scope: St Barnabas liturgical announcements only (non-commercial). Commons hosts
- * only free licences; attribution goes in the caption file, never burned into the image.
+ * only *free* licences, but this tool restricts further to ones Commons labels **public
+ * domain or CC0** — CC BY / CC BY-SA and other still-copyrighted free licences are rejected
+ * (see `isOutOfCopyright`, which also notes the UK-vs-US PD limitation). Attribution is still
+ * recorded in the caption file (courtesy for PD/CC0), never burned into the image.
  */
 
 const fs = require("fs");
@@ -44,6 +47,32 @@ const MIN_SHORT_SIDE = 1080;
 const ARTWORK = /\b(painting|paintings|oil on|tempera|panel painting|icon|icons|fresco|frescoes|altarpiece|retable|mosaic|mosaics|illumination|illuminated|miniature|manuscript|triptych|diptych|stained.?glass|tapestry|engraving|etching|woodcut|drawing|drawings|watercolou?r|iconography|holy card|prayer card)\b/i;
 // Hard reject even if something slips through: obvious non-art.
 const REJECT_TITLE = /\bphotograph|\bphoto\b|\(IA |commentary|\bmap\b|diagram|aerial|panorama|gravestone|headstone|floor ?plan|\bplan of\b|postcard of a (church|building)/i;
+
+// PUBLIC-DOMAIN / CC0 GATE. Wikimedia Commons hosts only *free* licences, but "free" is not
+// the same as "out of copyright": CC BY / CC BY-SA works are still under copyright and carry
+// attribution (and, for SA, share-alike) obligations. This gate rejects those, so posting a
+// poster never depends on getting a licence's conditions right.
+//
+// `LicenseShortName` (from Commons extmetadata) is the per-file value we test. It is usually
+// the human string "Public domain" or "CC0"; CC-licensed files render as e.g. "CC BY-SA 4.0".
+// We require an explicit PD/CC0 signal AND the absence of any attribution/share-alike/non-free
+// token, so a mixed or ambiguous licence is rejected.
+//
+// KNOWN LIMITATION (UK vs US). This trusts Commons' "Public domain" label; it does NOT
+// independently verify UK status (life of the artist + 70 years). US-only PD files
+// (PD-US-no-notice / not-renewed / pre-1929-published) report the same plain "Public domain"
+// string yet can still be in UK copyright. We accept that residual risk deliberately: the art
+// this tool sources is centuries-old sacred work (artists long dead), where UK and US PD
+// coincide. Tighten with a Wikidata P570 death-date check if that ever stops holding.
+const PD_OR_CC0 = /\b(public domain|public domain mark|pd-?art|pd-?old|pd-?mark|cc0|cc-?zero)\b/i;
+const RESTRICTED_LICENCE = /\b(by[- ]?sa|by[- ]?nc|by[- ]?nd|cc[- ]?by\b|attribution|share[- ]?alike|gfdl|free art license|\bfal\b|gnu|all rights reserved|fair use|non[- ]?free)\b/i;
+
+/** True only for licences that are unambiguously public domain or CC0 (out of copyright). */
+function isOutOfCopyright(licence) {
+  const s = String(licence == null ? "" : licence);
+  if (RESTRICTED_LICENCE.test(s)) return false; // any attribution / share-alike / non-free clause → reject
+  return PD_OR_CC0.test(s);                      // accept only an explicit PD or CC0 signal
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -151,7 +180,7 @@ async function commonsSearch(query, { cache = true } = {}) {
     const categories = stripHtml(em.Categories?.value).replace(/\|/g, " ");
     const licence = stripHtml(em.LicenseShortName?.value) || "see source";
     const credit = stripHtml(em.Credit?.value);
-    if (!artist && !credit && !/public domain/i.test(licence)) continue; // need recoverable attribution
+    if (!isOutOfCopyright(licence)) continue; // out-of-copyright only — reject CC BY/BY-SA/etc.
     const fileTitle = p.title.replace(/^File:/, "").replace(/\.[a-z0-9]+$/i, "");
     const displayTitle = (objName && objName.length < 90 ? objName : fileTitle);
     const haystack = `${fileTitle} ${objName} ${categories}`;
@@ -210,6 +239,7 @@ async function wikidataActSearch(subjectLabel, { cache = true } = {}) {
     const meta = await commonsFileInfo("File:" + commonsFile.replace(/^File:/, ""));
     if (!meta) continue;
     if (Math.min(meta.width, meta.height) < MIN_SHORT_SIDE) continue;
+    if (!isOutOfCopyright(meta.licence)) continue; // out-of-copyright only (see commonsSearch)
     const artist = stripHtml(r.creatorLabel?.value) || meta.artist;
     candidates.push({
       source: "act",
@@ -280,6 +310,9 @@ function manifestCandidate(feastTags) {
     if (entry.feastTags.some((t) => feastTags.includes(t))) {
       const file = path.join(ROOT, entry.imageFile);
       if (!fs.existsSync(file)) continue;
+      // Skip a cached pick only if its recorded licence is affirmatively non-PD/CC0; entries
+      // that predate licence-recording (null) were human-approved, so keep offering them.
+      if (entry.licence && !isOutOfCopyright(entry.licence)) continue;
       return {
         source: "manifest",
         title: entry.occasion || entry.feastTags[0],
@@ -417,4 +450,5 @@ module.exports = {
   politeFetch,
   buildAttribution,
   genericSacredArt,
+  isOutOfCopyright,
 };
