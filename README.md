@@ -84,16 +84,27 @@ Art is sourced through a tiered chain that always tries to find something approp
 1. **manifest cache** — a previously approved, feast-tagged image (offered first);
 2. **ACT via Wikidata** — Art in the Christian Tradition records (Wikidata property **P9092**)
    that depict the occasion's subject, resolved to their Wikimedia Commons image;
-3. **Wikimedia Commons** — keyword/scripture search backstop (only free-licensed images).
+3. **Wikimedia Commons** — keyword/scripture search backstop.
 
-Candidates are quality-filtered (actual artworks, ≥1080 px on the short side) and shown as a
-local HTML contact sheet so the art can be judged before approval. Each candidate carries an
-**exact attribution**; credits are never fabricated.
+Candidates are quality-filtered (actual artworks, ≥1080 px on the short side) **and
+copyright-filtered: only art that Commons reports as public domain or CC0 is accepted**.
+CC BY, CC BY-SA, GFDL and other still-copyrighted free licences are rejected outright across
+every tier — including the manifest cache (see `isOutOfCopyright` in `src/act-client.js`).
+Surviving candidates are shown as a local HTML contact sheet so the art can be judged before
+approval. Each carries an **exact attribution**; credits are never fabricated.
 
-> **Licence / scope.** Images are used for **St Barnabas liturgical announcements only**
-> (non-commercial, religious/educational). Wikimedia Commons hosts only free licences;
-> attribution is recorded and written into each poster's `.caption.txt` — **never burned into
-> the image**. Do not adapt this tool for commercial use.
+> **Licence / scope.** Images are restricted to **public-domain / CC0 art** and used for
+> **St Barnabas liturgical announcements only** (non-commercial, religious/educational). For
+> public-domain works no credit is legally required, but an attribution line is still recorded
+> and written into each poster's `.caption.txt` as a courtesy — **never burned into the
+> image**. Do not adapt this tool for commercial use.
+>
+> **UK-vs-US caveat.** The filter trusts Commons' own "Public domain" label; it does **not**
+> independently check UK status (life of the artist + 70 years). US-only public-domain files
+> (e.g. *PD-US-no-notice*) report the same "Public domain" string yet can still be in UK
+> copyright. This is a deliberate, accepted residual risk: the sacred art sourced here is
+> centuries-old (artists long dead), where UK and US public domain coincide. If that ever
+> stops holding, add a Wikidata P570 death-date check.
 
 ## Output
 

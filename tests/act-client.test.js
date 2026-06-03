@@ -1,6 +1,54 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
-const { genericSacredArt } = require("../src/act-client.js");
+const { genericSacredArt, isOutOfCopyright } = require("../src/act-client.js");
+
+test("isOutOfCopyright accepts only public-domain / CC0 licences", () => {
+  // Out of copyright — accepted.
+  for (const ok of [
+    "Public domain",
+    "public domain",
+    "Public Domain Mark",
+    "PD-Art",
+    "PD-old-100",
+    "PD-Mark",
+    "CC0",
+    "CC0 1.0",
+    "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
+    "CC-Zero",
+  ]) {
+    assert.strictEqual(isOutOfCopyright(ok), true, `should accept: ${ok}`);
+  }
+
+  // Still under copyright (even if freely licensed), or unknown — rejected.
+  for (const bad of [
+    "CC BY 4.0",
+    "CC BY-SA 4.0",
+    "CC BY-SA 3.0",
+    "CC BY 2.0",
+    "CC-BY-SA-2.5",
+    "CC BY-NC 4.0",
+    "CC BY-ND 4.0",
+    "GFDL",
+    "GNU Free Documentation License",
+    "Free Art License",
+    "FAL",
+    "All rights reserved",
+    "Fair use",
+    "see source",
+    "",
+    null,
+    undefined,
+  ]) {
+    assert.strictEqual(isOutOfCopyright(bad), false, `should reject: ${bad}`);
+  }
+
+  // Mixed/ambiguous: a PD wording that also carries a CC-BY clause must be rejected.
+  assert.strictEqual(
+    isOutOfCopyright("Public domain in the US; CC BY-SA 4.0 elsewhere"),
+    false,
+    "a mixed PD + CC BY-SA string must be rejected",
+  );
+});
 
 // A fake commonsSearch: returns a deterministic candidate per query so we can test the
 // backstop's pooling/dedup/rotation WITHOUT touching the network.
